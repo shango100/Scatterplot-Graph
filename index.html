@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyclist Data Visualization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 10px;
+            display: none;
+        }
+
+        .dot {
+            fill: steelblue;
+        }
+
+        #legend {
+            text-align: right;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<h1 style="text-align: center;">Cyclist Data Visualization</h1>
+<div id="tooltip"></div>
+<div id="legend"></div>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script>
+    const url = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json';
+
+    // Fetch data
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            // Chart dimensions
+            const width = 800;
+            const height = 400;
+            const padding = 40;
+
+            // Create SVG container
+            const svg = d3.select("body")
+                .append("svg")
+                .attr("width", "100%")
+                .attr("height", height + padding * 2);
+
+            // Create scales
+            const xScale = d3.scaleLinear()
+                .domain([d3.min(data, d => d.Year - 1), d3.max(data, d => d.Year + 1)])
+                .range([padding, width - padding]);
+
+            const yScale = d3.scaleTime()
+                .domain([d3.min(data, d => new Date(d.Seconds * 1000)), d3.max(data, d => new Date(d.Seconds * 1000))])
+                .range([height - padding, padding]);
+
+            // Create axes
+            const xAxis = d3.axisBottom(xScale).tickFormat(d3.format("d"));
+            const yAxis = d3.axisLeft(yScale).tickFormat(d3.timeFormat("%M:%S"));
+
+            // Append axes to SVG
+            svg.append("g")
+                .attr("transform", "translate(0," + (height - padding) + ")")
+                .attr("id", "x-axis")
+                .call(xAxis);
+
+            svg.append("g")
+                .attr("transform", "translate(" + padding + ",0)")
+                .attr("id", "y-axis")
+                .call(yAxis);
+
+            // Create dots
+            svg.selectAll(".dot")
+                .data(data)
+                .enter()
+                .append("circle")
+                .attr("class", "dot")
+                .attr("data-xvalue", d => d.Year)
+                .attr("data-yvalue", d => new Date(d.Seconds * 1000))
+                .attr("cx", d => xScale(d.Year))
+                .attr("cy", d => yScale(new Date(d.Seconds * 1000)))
+                .attr("r", 5)
+                .on("mouseover", function (event, d) {
+                    const tooltip = document.getElementById("tooltip");
+                    tooltip.style.display = "block";
+                    tooltip.style.left = event.pageX + 10 + "px";
+                    tooltip.style.top = event.pageY - 20 + "px";
+                    tooltip.innerHTML = `${d.Name}: ${d.Nationality}<br>Year: ${d.Year}<br>Time: ${d.Time}`;
+                    tooltip.setAttribute("data-year", d.Year);
+
+                    // Highlight corresponding dot
+                    d3.select(this).attr("fill", "red");
+                })
+                .on("mouseout", function () {
+                    const tooltip = document.getElementById("tooltip");
+                    tooltip.style.display = "none";
+
+                    // Reset dot color
+                    d3.select(this).attr("fill", "steelblue");
+                });
+
+            // Legend
+            const legend = d3.select("#legend")
+                .selectAll("div")
+                .data(["No doping allegations", "Riders with doping allegations"])
+                .enter()
+                .append("div")
+                .text(d => d)
+                .style("color", (d, i) => i === 0 ? "steelblue" : "red");
+        });
+</script>
+
+</body>
+</html>
